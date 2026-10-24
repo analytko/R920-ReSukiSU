@@ -471,6 +471,37 @@ jobs:
           export KBUILD_BUILD_HOST=VPHORC629
           export PATH="/usr/lib/llvm-14/bin:$PATH"
 
+          # Export para o BakaSU: com KALLSYMS_ALL off, o static_export_check
+          # exige sel_handle_status_ops exportado (build 40055205764 travou
+          # sem ele). Base vem do tarball R905USQU1DYL6
+          # (security/selinux/selinuxfs.c:272); incrementais nao tocam nele.
+          cat > export_sel_handle_status_ops.py <<'PY'
+          from pathlib import Path
+          p = Path("security/selinux/selinuxfs.c")
+          src = p.read_text(errors="ignore")
+          old_inc = "#include <linux/ctype.h>"
+          assert old_inc in src, "include base nao achado em selinuxfs.c"
+          if "#include <linux/export.h>" not in src:
+              src = src.replace(old_inc, old_inc + "\n#include <linux/export.h>", 1)
+          old = ("static const struct file_operations sel_handle_status_ops = {\n"
+                 "\t.open\t\t= sel_open_handle_status,\n"
+                 "\t.read\t\t= sel_read_handle_status,\n"
+                 "\t.mmap\t\t= sel_mmap_handle_status,\n"
+                 "\t.llseek\t\t= generic_file_llseek,\n"
+                 "};")
+          assert old in src, "bloco sel_handle_status_ops nao achado"
+          if "EXPORT_SYMBOL_GPL(sel_handle_status_ops);" not in src:
+              new = old.replace("static const", "const", 1) + "\nEXPORT_SYMBOL_GPL(sel_handle_status_ops);"
+              src = src.replace(old, new, 1)
+              p.write_text(src)
+              print("sel_handle_status_ops exportado")
+          else:
+              print("sel_handle_status_ops ja exportado")
+          PY
+          python3 export_sel_handle_status_ops.py
+          grep -n "sel_handle_status_ops" security/selinux/selinuxfs.c
+
+
           # DEFCONFIG candidato NAO confirmado: o nome abaixo segue o padrao do
           # R960 (wise6blue -> projectxblue) e PODE NAO EXISTIR no fonte real
           # do R920. So use o defconfig achado com find no fonte do Passo 4.
@@ -513,17 +544,17 @@ jobs:
           ./scripts/config --file out_resukisu/.config -d DEBUG_INFO_DWARF5 || true
           ./scripts/config --file out_resukisu/.config -d DEBUG_INFO_SPLIT || true
 
-          # Dieta round 1 (build 40050917603: Image 32393224 > budget
-          # 28516000; stock R920XXS2DZE1 tem kernel de 17909060, ramdisk
-          # 9109284, sem IKCFG embutido). Pratica normal de kernel custom;
-          # nada aqui afeta root/ReSukiSU nem o boot:
-          # sanitizers off, O2 -> Os, sem KPROBES/EXYNOS_DEBUG_INFO/IKCONFIG.
-          # KALLSYMS_ALL fica LIGADO: o BakaSU exige (static_export_check.mk
-          # trava sem ele; build 40053502864 provou).
+          # Dieta round 2 (build 40055205764: Image 30398472 > budget
+          # 28516000 mesmo com KALLSYMS_ALL; faltam ~1.9 MB). Pratica normal
+          # de kernel custom; nada aqui afeta root/ReSukiSU nem o boot:
+          # KALLSYMS_ALL off (com export de sel_handle_status_ops acima,
+          # caminho que o proprio BakaSU sugere), FTRACE off, KVM/
+          # VIRTUALIZATION off (relógio nao virtualiza), resto do round 1.
           for sym in KASAN KASAN_HW_TAGS KASAN_VMALLOC KASAN_SW_TAGS \
             KASAN_GENERIC UBSAN UBSAN_SANITIZE_ALL UBSAN_BOUNDS \
             UBSAN_ARRAY_BOUNDS UBSAN_LOCAL_BOUNDS KPROBES \
-            EXYNOS_DEBUG_INFO IKCONFIG IKCONFIG_PROC \
+            EXYNOS_DEBUG_INFO IKCONFIG IKCONFIG_PROC KALLSYMS_ALL \
+            FTRACE VIRTUALIZATION KVM \
             CC_OPTIMIZE_FOR_PERFORMANCE; do
             ./scripts/config --file out_resukisu/.config -d "$sym" || true
           done
@@ -537,7 +568,7 @@ jobs:
           make O=out_resukisu olddefconfig
 
           echo "===== CONFIG CHECK ====="
-          grep -Ei "LOCALVERSION|KSU|KERNELSU|RESUKISU|KSU_MANUAL_HOOK|MODULE_SIG_PROTECT|CONFIG_UH|CONFIG_RKP|CONFIG_KDP|CONFIG_SECURITY_DEFEX|CONFIG_SVSMC|CONFIG_SAMSUNG_PRODUCT_SHIP" out_resukisu/.config || true
+          grep -Ei "LOCALVERSION|KSU|KERNELSU|RESUKISU|KSU_MANUAL_HOOK|MODULE_SIG_PROTECT|CONFIG_UH|CONFIG_RKP|CONFIG_KDP|CONFIG_SECURITY_DEFEX|CONFIG_SVSMC|CONFIG_SAMSUNG_PRODUCT_SHIP|KALLSYMS|CONFIG_FTRACE|CONFIG_KVM|CONFIG_VIRTUALIZATION|CC_OPTIMIZE|CONFIG_KASAN|CONFIG_UBSAN" out_resukisu/.config || true
 
           echo "===== SAMSUNG BLOCKER STRICT CHECK ====="
           BAD=0
