@@ -576,21 +576,30 @@ jobs:
           ./scripts/config --file out_resukisu/.config -d DEBUG_INFO_DWARF5 || true
           ./scripts/config --file out_resukisu/.config -d DEBUG_INFO_SPLIT || true
 
-                    # Dieta round 3 (build 40059092923: KALLSYMS_ALL off quebra o link -
-          # o selinux_hide do BakaSU referencia write_op, que nao existe no
-          # selinuxfs da Samsung; com _ALL on ele resolve via kallsyms em
-          # tempo de execucao. KALLSYMS_ALL volta ON (exports acima ficam
-          # como documentacao). Para compensar: DEBUG_KERNEL off (cascata
-          # de debug; ver CASCATA no log), HIBERNATION off (relogio nao
-          # hiberna em disco), UPROBES/XDP/CLS_BPF/SOCK_MSG off, resto
-          # dos rounds 1-2 (KVM off, sanitizers off, O2 -> Os).
+                              # Dieta round 4 (build 40061265073: 29632520 > budget 28516000;
+          # faltam 1.1 MB; nm mostra gordura distribuida, sem um culpado so.
+          # Remove (tudo =y no defconfig, nada no caminho de boot/root/radio/
+          # display/audio/sensor; radios USB/BT/WLAN intocados): KFENCE,
+          # SLUB_DEBUG, SCHED_DEBUG/STATS, PM_DEBUG, governadores sobrando
+          # (cpufreq PERFORMANCE/POWERSAVE/CONSERVATIVE, cpuidle MENU/HALO;
+          # ficam SCHEDUTIL+ENERGYAWARE e TEO), USB_STORAGE (host; gadget fica),
+          # NFC todo (SM-R920 nao tem NFC), PRINTK_CALLER, IO_URING, TIPC,
+          # L2TP, PHONET, IEEE802154/6LOWPAN, WIREGUARD, MACSEC. UPROBES e
+          # NET_SOCK_MSG a arvore religa sozinha (select); manter no -d nao
+          # faz mal. Resto dos rounds 1-3 mantido.
           for sym in KASAN KASAN_HW_TAGS KASAN_VMALLOC KASAN_SW_TAGS \
             KASAN_GENERIC UBSAN UBSAN_SANITIZE_ALL UBSAN_BOUNDS \
             UBSAN_ARRAY_BOUNDS UBSAN_LOCAL_BOUNDS KPROBES \
             EXYNOS_DEBUG_INFO IKCONFIG IKCONFIG_PROC \
             VIRTUALIZATION KVM DEBUG_KERNEL HIBERNATION \
             HIBERNATION_SNAPSHOT_DEV UPROBES XDP_SOCKETS NET_CLS_BPF \
-            NET_SOCK_MSG \
+            NET_SOCK_MSG KFENCE SLUB_DEBUG SCHED_DEBUG SCHEDSTATS \
+            PM_DEBUG CPU_FREQ_GOV_PERFORMANCE CPU_FREQ_GOV_POWERSAVE \
+            CPU_FREQ_GOV_CONSERVATIVE CPU_IDLE_GOV_MENU CPU_IDLE_GOV_HALO \
+            USB_STORAGE NFC NFC_NXP_COMBINED NFC_SN2XX \
+            NFC_SN2XX_ESE_SUPPORT NFC_LOGGER_LOWMEM PRINTK_CALLER \
+            IO_URING TIPC L2TP PHONET IEEE802154 IEEE802154_SOCKET \
+            IEEE802154_6LOWPAN IEEE802154_DRIVERS WIREGUARD MACSEC \
             CC_OPTIMIZE_FOR_PERFORMANCE; do
             ./scripts/config --file out_resukisu/.config -d "$sym" || true
           done
