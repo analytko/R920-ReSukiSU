@@ -471,9 +471,15 @@ jobs:
           export KBUILD_BUILD_HOST=VPHORC629
           export PATH="/usr/lib/llvm-14/bin:$PATH"
 
+          # DEFCONFIG candidato NAO confirmado: o nome abaixo segue o padrao do
+          # R960 (wise6blue -> projectxblue) e PODE NAO EXISTIR no fonte real
+          # do R920. So use o defconfig achado com find no fonte do Passo 4.
+          # A trava abaixo impede build com defconfig errado.
           DEFCONFIG="${DEFCONFIG:-s5e5515-projectxblue_defconfig}"
           if [ ! -f "arch/arm64/configs/$DEFCONFIG" ]; then
-            echo "DEFCONFIG $DEFCONFIG not found. Available s5e5515/projectx configs listed above; set DEFCONFIG env or edit workflow."
+            echo "DEFCONFIG $DEFCONFIG nao encontrado no fonte extraido."
+            echo "Rode: find work/kernel/arch/arm64/configs -type f | sort"
+            echo "e informe o DEFCONFIG real do R920 (variavel DEFCONFIG ou edite o workflow). Nao use defconfig do R960."
             exit 1
           fi
           make O=out_resukisu "$DEFCONFIG"

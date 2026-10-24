@@ -16,8 +16,11 @@ Workflow: `.github/workflows/Build-R920.yml`.
   passar (e tenta desligar `DEBUG_INFO*`).
 - `rollback_index 0` (stock), `security_patch 2026-05-05`, `os_version 16`.
 - `LOCALVERSION "-ReSukiSU-33003255-abR920XXS2DZE1"`, `TARGET_SOC s5e5515`.
-- `DEFCONFIG` padrão `s5e5515-projectxblue_defconfig` (por analogia ao
-  `wise6blue`; o workflow lista os candidatos e falha explicando se não achar).
+- `DEFCONFIG` ainda SEM confirmar: `s5e5515-projectxblue_defconfig` é só um
+  nome candidato (padrão do `wise6blue` trocado para `projectxblue`) e pode
+  não existir. O fonte do R960 não contém nenhum `projectx`. Só vale o
+  `defconfig` achado com `find` no fonte real do R920; o workflow trava
+  com mensagem clara se não achar.
 
 ## O que falta (manual, sem como automatizar daqui)
 

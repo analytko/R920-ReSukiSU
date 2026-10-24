@@ -2,6 +2,16 @@
   <img loading="lazy" src="KernelBanner.png"/>
 </h1>
 
+> **ATENÇÃO — fork para `SM-R920` (Galaxy Watch 5):** este repositório foi
+> adaptado para o `SM-R920` / `projectxbl` / `R920XXS2DZE1`. **Nunca grave
+> neste relógio os arquivos `SM-R960` / `wise6bl` / `R960XXU2CZB6` do
+> projeto original — isso bricka o aparelho.**
+> O workflow válido aqui é `.github/workflows/Build-R920.yml`
+> (`Build SM-R920 ReSukiSU AP`), e o pacote `AP` do `R920` leva só
+> `boot.img` + `vbmeta.img` (o `R920` não tem partição `init_boot`).
+> Detalhes em `R920-NOTAS.md`. O texto original do `SM-R960` abaixo é
+> histórico do projeto de origem.
+
 <div align="center">
 
 [![Telegram](https://img.shields.io/badge/Telegram-Channel-26A5E4?style=flat-square&logo=Telegram)](https://t.me/R960RESU)
