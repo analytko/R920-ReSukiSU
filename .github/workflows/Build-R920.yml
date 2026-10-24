@@ -895,6 +895,15 @@ jobs:
           - boot.img (header v2, kernel replaced, ramdisk+dtb stock)
           - vbmeta.img (local key, flags 3)
 
+          AVB note: stock vbmeta (avbinfo-stock.txt) is Samsung key flags 0
+          with chains for recovery/dtbo/prism/optics plus hashes for
+          boot/bootloader/keystorage/ldfw/tzsw. This custom vbmeta is signed
+          with a LOCAL key (flags 3) and carries ONLY the boot hash
+          descriptor (+ boot os_version/security_patch props). The stock
+          chain is therefore broken by design: the AP only boots after
+          bootloader unlock + custom-key enrollment, via Download
+          (wireless) + NetOdin. NEVER flash on locked bootloader.
+
           Included:
           - ReSukiSU setup.sh integration
           - CONFIG_KSU=y
