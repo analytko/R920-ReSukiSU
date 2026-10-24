@@ -517,12 +517,13 @@ jobs:
           # 28516000; stock R920XXS2DZE1 tem kernel de 17909060, ramdisk
           # 9109284, sem IKCFG embutido). Pratica normal de kernel custom;
           # nada aqui afeta root/ReSukiSU nem o boot:
-          # sanitizers off, O2 -> Os, sem KALLSYMS_ALL/KPROBES/
-          # EXYNOS_DEBUG_INFO/IKCONFIG.
+          # sanitizers off, O2 -> Os, sem KPROBES/EXYNOS_DEBUG_INFO/IKCONFIG.
+          # KALLSYMS_ALL fica LIGADO: o BakaSU exige (static_export_check.mk
+          # trava sem ele; build 40053502864 provou).
           for sym in KASAN KASAN_HW_TAGS KASAN_VMALLOC KASAN_SW_TAGS \
             KASAN_GENERIC UBSAN UBSAN_SANITIZE_ALL UBSAN_BOUNDS \
             UBSAN_ARRAY_BOUNDS UBSAN_LOCAL_BOUNDS KPROBES \
-            EXYNOS_DEBUG_INFO IKCONFIG IKCONFIG_PROC KALLSYMS_ALL \
+            EXYNOS_DEBUG_INFO IKCONFIG IKCONFIG_PROC \
             CC_OPTIMIZE_FOR_PERFORMANCE; do
             ./scripts/config --file out_resukisu/.config -d "$sym" || true
           done
