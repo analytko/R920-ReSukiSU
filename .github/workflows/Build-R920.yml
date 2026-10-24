@@ -580,7 +580,9 @@ jobs:
           # faltam 1.1 MB; nm mostra gordura distribuida, sem um culpado so.
           # Remove (tudo =y no defconfig, nada no caminho de boot/root/radio/
           # display/audio/sensor; radios USB/BT/WLAN intocados): KFENCE,
-          # SLUB_DEBUG, SCHED_DEBUG/STATS, PM_DEBUG, governadores sobrando
+          # SLUB_DEBUG, PM_DEBUG, governadores sobrando
+          # (SCHED_DEBUG/STATS ficam: o EMS da Samsung usa sched_feat_*;
+          # build 40063494991 provou)
           # (cpufreq PERFORMANCE/POWERSAVE/CONSERVATIVE, cpuidle MENU/HALO;
           # ficam SCHEDUTIL+ENERGYAWARE e TEO), USB_STORAGE (host; gadget fica),
           # NFC todo (SM-R920 nao tem NFC), PRINTK_CALLER, IO_URING, TIPC,
@@ -593,7 +595,7 @@ jobs:
             EXYNOS_DEBUG_INFO IKCONFIG IKCONFIG_PROC \
             VIRTUALIZATION KVM DEBUG_KERNEL HIBERNATION \
             HIBERNATION_SNAPSHOT_DEV UPROBES XDP_SOCKETS NET_CLS_BPF \
-            NET_SOCK_MSG KFENCE SLUB_DEBUG SCHED_DEBUG SCHEDSTATS \
+            NET_SOCK_MSG KFENCE SLUB_DEBUG \
             PM_DEBUG CPU_FREQ_GOV_PERFORMANCE CPU_FREQ_GOV_POWERSAVE \
             CPU_FREQ_GOV_CONSERVATIVE CPU_IDLE_GOV_MENU CPU_IDLE_GOV_HALO \
             USB_STORAGE NFC NFC_NXP_COMBINED NFC_SN2XX \
