@@ -584,6 +584,10 @@ jobs:
           # PRINTK_CALLER, IO_URING, TIPC/L2TP/PHONET, IEEE802154/6LOWPAN,
           # WIREGUARD, MACSEC. UPROBES e NET_SOCK_MSG a arvore religa
           # sozinha (select). Resto dos rounds 1-3 mantido.
+          # Ficam ON de proposito (rounds 1 e 4 tentaram desligar e quebraram):
+          # KALLSYMS_ALL (BakaSU referencia write_op via kallsyms em runtime),
+          # FTRACE + SCHED_DEBUG/STATS (EMS da Samsung usa register_trace_*
+          # e sched_feat_*), NFC + nxp_combined (radio do relogio).
           # Dieta round 5 (build 40065554474: 28786696 > budget 28516000;
           # faltam 271 KB): contadores e filesystems mortos. TASKSTATS
           # (+cascata ACCT), CGROUP_CPUACCT, PM_SLEEP_DEBUG, BLK_CGROUP_IOCOST,
