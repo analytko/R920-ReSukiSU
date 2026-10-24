@@ -475,31 +475,63 @@ jobs:
           # exige sel_handle_status_ops exportado (build 40055205764 travou
           # sem ele). Base vem do tarball R905USQU1DYL6
           # (security/selinux/selinuxfs.c:272); incrementais nao tocam nele.
-          cat > export_sel_handle_status_ops.py <<'PY'
+                    # Exports para o BakaSU: com KALLSYMS_ALL off, o static_export_check
+          # exige estes 3 simbolos nao-static (builds 40055205764 e 40057157293
+          # travaram em cada um). Lista completa em
+          # BakaSU/kernel/tools/static_export_check.mk. Base vem do tarball
+          # R905USQU1DYL6; incrementais nao tocam nesses arquivos.
+          cat > export_bakasu_syms.py <<'PY'
           from pathlib import Path
-          p = Path("security/selinux/selinuxfs.c")
-          src = p.read_text(errors="ignore")
-          old_inc = "#include <linux/ctype.h>"
-          assert old_inc in src, "include base nao achado em selinuxfs.c"
-          if "#include <linux/export.h>" not in src:
-              src = src.replace(old_inc, old_inc + "\n#include <linux/export.h>", 1)
-          old = ("static const struct file_operations sel_handle_status_ops = {\n"
-                 "\t.open\t\t= sel_open_handle_status,\n"
-                 "\t.read\t\t= sel_read_handle_status,\n"
-                 "\t.mmap\t\t= sel_mmap_handle_status,\n"
-                 "\t.llseek\t\t= generic_file_llseek,\n"
-                 "};")
-          assert old in src, "bloco sel_handle_status_ops nao achado"
-          if "EXPORT_SYMBOL_GPL(sel_handle_status_ops);" not in src:
-              new = old.replace("static const", "const", 1) + "\nEXPORT_SYMBOL_GPL(sel_handle_status_ops);"
-              src = src.replace(old, new, 1)
+
+
+          def unstatic_export(rel, sig_start, sym):
+              p = Path(rel)
+              src = p.read_text(errors="ignore")
+              n = src.count(sig_start)
+              assert n >= 1, f"assinatura nao achada em {rel}: {sig_start[:60]!r}"
+              src = src.replace(sig_start, sig_start.replace("static ", "", 1))
+              # fim da definicao: primeira linha "}" na coluna 0 apos a ULTIMA ocorrencia
+              idx = src.rfind(sig_start.replace("static ", "", 1))
+              end = src.find("\n}\n", idx)
+              assert end != -1, f"fim da funcao nao achado em {rel} para {sym}"
+              tag = f"EXPORT_SYMBOL_GPL({sym});"
+              if tag not in src:
+                  src = src[:end + 3] + tag + "\n" + src[end + 3:]
               p.write_text(src)
-              print("sel_handle_status_ops exportado")
-          else:
-              print("sel_handle_status_ops ja exportado")
+              # prova que o check do BakaSU (grep -F) passa
+              assert sig_start not in p.read_text(errors="ignore"), f"check falharia em {rel}"
+              print(f"{sym} exportado em {rel}")
+
+
+          def ensure_include(rel, anchor, inc):
+              p = Path(rel)
+              src = p.read_text(errors="ignore")
+              assert anchor in src, f"anchor nao achado em {rel}"
+              if inc not in src:
+                  src = src.replace(anchor, anchor + "\n" + inc, 1)
+                  p.write_text(src)
+
+
+          SFS = "security/selinux/selinuxfs.c"
+          SVC = "security/selinux/ss/services.c"
+          EXP = "#include <linux/export.h>"
+
+          ensure_include(SFS, "#include <linux/ctype.h>", EXP)
+          unstatic_export(SFS,
+                          "static const struct file_operations sel_handle_status_ops = {",
+                          "sel_handle_status_ops")
+
+          ensure_include(SVC, "#include <trace/hooks/selinux.h>", EXP)
+          unstatic_export(SVC,
+                          "static void security_dump_masked_av(struct policydb *policydb,",
+                          "security_dump_masked_av")
+          unstatic_export(SVC,
+                          "static void context_struct_compute_av(struct policydb *policydb,",
+                          "context_struct_compute_av")
+          print("exports BakaSU ok")
           PY
-          python3 export_sel_handle_status_ops.py
-          grep -n "sel_handle_status_ops" security/selinux/selinuxfs.c
+          python3 export_bakasu_syms.py
+          grep -n "sel_handle_status_ops\|security_dump_masked_av\|context_struct_compute_av\|EXPORT_SYMBOL_GPL" security/selinux/selinuxfs.c security/selinux/ss/services.c
 
 
           # DEFCONFIG candidato NAO confirmado: o nome abaixo segue o padrao do
