@@ -579,13 +579,14 @@ jobs:
                               # Dieta round 4 (build 40061265073: 29632520 > budget 28516000;
           # faltam 1.1 MB; nm mostra gordura distribuida, sem um culpado so.
           # Remove (tudo =y no defconfig, nada no caminho de boot/root/radio/
-          # display/audio/sensor; radios USB/BT/WLAN intocados): KFENCE,
+          # display/audio/sensor; radios USB/BT/WLAN/NFC intocados): KFENCE,
           # SLUB_DEBUG, PM_DEBUG, governadores sobrando
           # (SCHED_DEBUG/STATS ficam: o EMS da Samsung usa sched_feat_*;
           # build 40063494991 provou)
           # (cpufreq PERFORMANCE/POWERSAVE/CONSERVATIVE, cpuidle MENU/HALO;
           # ficam SCHEDUTIL+ENERGYAWARE e TEO), USB_STORAGE (host; gadget fica),
-          # NFC todo (SM-R920 nao tem NFC), PRINTK_CALLER, IO_URING, TIPC,
+          # PRINTK_CALLER, IO_URING, TIPC,
+          # (NFC fica: o driver nxp_combined quebra sem o logger; sem ganho)
           # L2TP, PHONET, IEEE802154/6LOWPAN, WIREGUARD, MACSEC. UPROBES e
           # NET_SOCK_MSG a arvore religa sozinha (select); manter no -d nao
           # faz mal. Resto dos rounds 1-3 mantido.
@@ -598,8 +599,7 @@ jobs:
             NET_SOCK_MSG KFENCE SLUB_DEBUG \
             PM_DEBUG CPU_FREQ_GOV_PERFORMANCE CPU_FREQ_GOV_POWERSAVE \
             CPU_FREQ_GOV_CONSERVATIVE CPU_IDLE_GOV_MENU CPU_IDLE_GOV_HALO \
-            USB_STORAGE NFC NFC_NXP_COMBINED NFC_SN2XX \
-            NFC_SN2XX_ESE_SUPPORT NFC_LOGGER_LOWMEM PRINTK_CALLER \
+            USB_STORAGE PRINTK_CALLER \
             IO_URING TIPC L2TP PHONET IEEE802154 IEEE802154_SOCKET \
             IEEE802154_6LOWPAN IEEE802154_DRIVERS WIREGUARD MACSEC \
             CC_OPTIMIZE_FOR_PERFORMANCE; do
