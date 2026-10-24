@@ -544,17 +544,16 @@ jobs:
           ./scripts/config --file out_resukisu/.config -d DEBUG_INFO_DWARF5 || true
           ./scripts/config --file out_resukisu/.config -d DEBUG_INFO_SPLIT || true
 
-          # Dieta round 2 (build 40055205764: Image 30398472 > budget
-          # 28516000 mesmo com KALLSYMS_ALL; faltam ~1.9 MB). Pratica normal
-          # de kernel custom; nada aqui afeta root/ReSukiSU nem o boot:
-          # KALLSYMS_ALL off (com export de sel_handle_status_ops acima,
-          # caminho que o proprio BakaSU sugere), FTRACE off, KVM/
-          # VIRTUALIZATION off (relógio nao virtualiza), resto do round 1.
+          # Dieta round 2b (build 40056952817: -d FTRACE quebrou
+          # kernel/sched/ems/hook.c — o EMS da Samsung usa os vendor hooks
+          # register_trace_android_rvh_*. FTRACE fica LIGADO. KVM/
+          # VIRTUALIZATION off (relogio nao virtualiza), KALLSYMS_ALL off
+          # (com export de sel_handle_status_ops acima), resto do round 1.
           for sym in KASAN KASAN_HW_TAGS KASAN_VMALLOC KASAN_SW_TAGS \
             KASAN_GENERIC UBSAN UBSAN_SANITIZE_ALL UBSAN_BOUNDS \
             UBSAN_ARRAY_BOUNDS UBSAN_LOCAL_BOUNDS KPROBES \
             EXYNOS_DEBUG_INFO IKCONFIG IKCONFIG_PROC KALLSYMS_ALL \
-            FTRACE VIRTUALIZATION KVM \
+            VIRTUALIZATION KVM \
             CC_OPTIMIZE_FOR_PERFORMANCE; do
             ./scripts/config --file out_resukisu/.config -d "$sym" || true
           done
