@@ -4,13 +4,13 @@
 
 > **ATENÇÃO — fork para `SM-R920` (Galaxy Watch 5):** este repositório foi
 > adaptado para o `SM-R920` / `projectxbl` / `R920XXS2DZE1`. **Nunca grave
-> neste relógio os arquivos `SM-R960` / `wise6bl` / `R960XXU2CZB6` do
-> projeto original — isso bricka o aparelho.**
+> neste relógio os arquivos do projeto original (Watch6 Classic) —
+> isso bricka o aparelho.**
 > O workflow válido aqui é `.github/workflows/Build-R920.yml`
 > (`Build SM-R920 ReSukiSU AP`), e o pacote `AP` do `R920` leva só
 > `boot.img` + `vbmeta.img` (o `R920` não tem partição `init_boot`).
-> Detalhes em `R920-NOTAS.md`. O texto original do `SM-R960` abaixo é
-> histórico do projeto de origem.
+> Detalhes em `R920-NOTAS.md`. O texto do projeto de origem abaixo é
+> histórico e não vale para este relógio.
 
 <div align="center">
 
@@ -19,8 +19,29 @@
 [![GitHubDownloads](https://img.shields.io/github/downloads/ItsJustJoshDev/AlphaKernel-R960/total?color=blue&label=Downloads+from+GitHub+Source&style=flat-square)](https://github.com/ItsJustJoshDev/AlphaKernel-R960/releases)
 </div>
 
-### Project Overview 
-No Susfs Support I'ma not backporting that 😭
+### Alvo deste fork — `SM-R920`
+
+| Item | Value |
+|---|---|
+| Device | Samsung Galaxy Watch 5 |
+| Model | `SM-R920` |
+| Codename | `projectxbl` |
+| Product | `projectxblue` |
+| Firmware | `R920XXS2DZE1` |
+| Android | `16` |
+| Kernel | `5.15.180-33003255-abR920XXS2DZE1` |
+| Platform | `s5e5515` / `erd5515` |
+| Bootloader | Unlocked required |
+| Pacote AP | `boot.img` + `vbmeta.img` (sem `init_boot` neste modelo) |
+
+Workflow válido: `.github/workflows/Build-R920.yml`. Detalhes em `R920-NOTAS.md`.
+
+---
+
+### Histórico do projeto original — NÃO USAR NO `R920`
+
+Texto abaixo herdado do AlphaKernel-R960 (`SM-R960` / `wise6bl`). Mantido só
+como referência — gravar esses arquivos num `SM-R920` bricka o aparelho.
 
 Custom ReSukiSU kernel/AP build workflow and usage notes for the Samsung Galaxy Watch6 Classic **SM-R960 / wise6bl**.
 
