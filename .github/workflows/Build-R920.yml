@@ -549,7 +549,7 @@ jobs:
 
           printf "" > .scmversion
 
-          ./scripts/config --file out_resukisu/.config --set-str LOCALVERSION "-ReSukiSU-33003255-abR920XXS2DZE1" || true
+          ./scripts/config --file out_resukisu/.config --set-str LOCALVERSION "-33003255-abR920XXS2DZE1" || true
           ./scripts/config --file out_resukisu/.config -d LOCALVERSION_AUTO || true
 
           # Disable Samsung/custom-kernel blockers if present.
@@ -591,7 +591,7 @@ jobs:
           # Dieta round 5 (build 40065554474: 28786696 > budget 28516000;
           # faltam 271 KB): contadores e filesystems mortos. TASKSTATS
           # (+cascata ACCT), CGROUP_CPUACCT, PM_SLEEP_DEBUG, BLK_CGROUP_IOCOST,
-          # MD (raid; dm-verity e separado e fica), FAT/MSDOS/VFAT + NLS
+          # FAT/MSDOS/VFAT + NLS
           # codepages (relogio nao tem sdcard nem USB com disco; ficam so
           # NLS_UTF8/ASCII), DETECT_HUNG_TASK, WQ_WATCHDOG. LOOP fica
           # (APEX usa). SD/UFS/MMC/SCSI, DM, F2FS/EXT4/EROFS intocados.
@@ -608,7 +608,7 @@ jobs:
             IO_URING TIPC L2TP PHONET IEEE802154 IEEE802154_SOCKET \
             IEEE802154_6LOWPAN IEEE802154_DRIVERS WIREGUARD MACSEC \
             TASKSTATS CGROUP_CPUACCT PM_SLEEP_DEBUG BLK_CGROUP_IOCOST \
-            MD FAT_FS MSDOS_FS VFAT_FS DETECT_HUNG_TASK WQ_WATCHDOG \
+            FAT_FS MSDOS_FS VFAT_FS DETECT_HUNG_TASK WQ_WATCHDOG \
             NLS_CODEPAGE_437 NLS_CODEPAGE_737 NLS_CODEPAGE_775 NLS_CODEPAGE_850 \
             NLS_CODEPAGE_852 NLS_CODEPAGE_855 NLS_CODEPAGE_857 NLS_CODEPAGE_860 \
             NLS_CODEPAGE_861 NLS_CODEPAGE_862 NLS_CODEPAGE_863 NLS_CODEPAGE_864 \
@@ -633,6 +633,12 @@ jobs:
 
           cp out_resukisu/.config /tmp/cfg_round3_pre_olddefconfig
           make O=out_resukisu olddefconfig
+          for sym in MD BLK_DEV_DM DM_VERITY DM_CRYPT DM_DEFAULT_KEY DM_INIT; do
+            if ! grep -qx "CONFIG_${sym}=y" out_resukisu/.config; then
+              echo "ERROR: CONFIG_${sym}=y is required to boot SM-R920"
+              exit 1
+            fi
+          done
           echo "===== CASCATA olddefconfig (o que os -d acima desligaram) ====="
           diff /tmp/cfg_round3_pre_olddefconfig out_resukisu/.config | head -100 || true
 
@@ -761,9 +767,12 @@ jobs:
       - name: Repack boot.img with ReSukiSU Image (header v2, SM-R920)
         run: |
           set -e
+          cp work/firmware/boot.img work/firmware/boot-stock.img
 
           cat > repack_boot_v2_r920.py <<'PY'
+          import hashlib
           import struct
+          import subprocess
           from pathlib import Path
 
           PART_SIZE = 37748736  # mmcblk0p18, 36864 KiB
@@ -772,7 +781,15 @@ jobs:
           out_path = Path("work/firmware/boot_resukisu_noavb.img")
 
           stock = stock_path.read_bytes()
-          kernel = kernel_path.read_bytes()
+          raw_kernel_size = kernel_path.stat().st_size
+          kernel = subprocess.run(
+              ["gzip", "-n", "-c", str(kernel_path)],
+              check=True, stdout=subprocess.PIPE,
+          ).stdout
+          if not kernel.startswith(b"\x1f\x8b"):
+              raise SystemExit("gzip -n did not produce a gzip kernel")
+          if len(kernel) > 28516000:
+              raise SystemExit(f"Compressed kernel exceeds 28516000-byte budget: {len(kernel)}")
 
           if stock[:8] != b"ANDROID!":
               raise SystemExit("stock boot.img is not an Android boot image")
@@ -784,6 +801,10 @@ jobs:
               raise SystemExit(f"unexpected header: version={hdr_ver} page={page} (R920 stock is v2/2048)")
 
           ks, rs, ss = u4(8), u4(16), u4(24)
+          recovery_dtbo_size = u4(1632)
+          recovery_dtbo_offset = struct.unpack_from("<Q", stock, 1636)[0]
+          if u4(1644) != 1660:
+              raise SystemExit("unexpected boot v2 header size")
           dtb_size = u4(1648)
 
           def padn(n):
@@ -793,26 +814,38 @@ jobs:
           k_off, k_end = off, off + padn(ks); off = k_end
           r_off, r_end = off, off + padn(rs); off = r_end
           s_off, s_end = off, off + padn(ss); off = s_end
-          d_off, d_end = off, off + dtb_size
+          rd_off, rd_end = off, off + padn(recovery_dtbo_size); off = rd_end
+          d_off, d_end = off, off + padn(dtb_size)
+          if recovery_dtbo_size and recovery_dtbo_offset != rd_off:
+              raise SystemExit("unexpected stock recovery DTBO offset")
+          if d_end > len(stock):
+              raise SystemExit("stock boot payload exceeds file size")
 
           ramdisk = stock[r_off:r_off + rs]
+          second = stock[s_off:s_off + ss]
+          recovery_dtbo = stock[rd_off:rd_off + recovery_dtbo_size]
           dtb = stock[d_off:d_off + dtb_size] if dtb_size else b""
           header = bytearray(stock[:page])
 
           struct.pack_into("<I", header, 8, len(kernel))
-          # kernel_addr/ramdisk/second/tags/page/version/os/name/cmdline/id/extra/dtb fields unchanged
+          if recovery_dtbo_size:
+              new_dtbo_offset = page + padn(len(kernel)) + padn(rs) + padn(ss)
+              struct.pack_into("<Q", header, 1636, new_dtbo_offset)
+          sha = hashlib.sha1()
+          for section in (kernel, ramdisk, second, recovery_dtbo, dtb):
+              sha.update(section)
+              sha.update(struct.pack("<I", len(section)))
+          header[576:608] = sha.digest().ljust(32, b"\x00")
 
           img = bytes(header)
-          img += kernel
-          img += b"\x00" * (padn(len(kernel)) - len(kernel))
-          img += ramdisk
-          img += b"\x00" * (padn(rs) - rs)
-          img += dtb
+          for section in (kernel, ramdisk, second, recovery_dtbo, dtb):
+              img += section
+              img += b"\x00" * (padn(len(section)) - len(section))
           img += b"SEANDROIDENFORCE"
           img += b"\x00" * (padn(len(img)) - len(img))
 
-          print("Old kernel:", ks, "New kernel:", len(kernel))
-          print("Ramdisk:", rs, "DTB:", dtb_size)
+          print("Old kernel:", ks, "Raw Image:", raw_kernel_size, "gzip kernel:", len(kernel))
+          print("Ramdisk:", rs, "Second:", ss, "Recovery DTBO:", recovery_dtbo_size, "DTB:", dtb_size)
           print("Repacked size:", len(img), "Partition:", PART_SIZE)
 
           if len(img) + 4096 >= PART_SIZE:
@@ -865,7 +898,7 @@ jobs:
           echo "===== New vbmeta info ====="
           python3 avbtool.py info_image --image work/firmware/vbmeta.img
 
-      - name: "Build plain POSIX Odin/NetOdin AP tar (SM-R920 boot+vbmeta only)"
+      - name: "Build USTAR Odin/NetOdin AP tar (SM-R920 boot+vbmeta only)"
         run: |
           set -e
 
@@ -874,7 +907,7 @@ jobs:
           cp work/firmware/boot.img final_ap/boot.img
           cp work/firmware/vbmeta.img final_ap/vbmeta.img
 
-          tar --format=posix -cf dist/R920_ReSukiSU_AP.tar -C final_ap boot.img vbmeta.img
+          tar --format=ustar -cf dist/R920_ReSukiSU_AP.tar -C final_ap boot.img vbmeta.img
 
           cp dist/R920_ReSukiSU_AP.tar dist/R920_ReSukiSU_AP.tar.md5
           md5sum dist/R920_ReSukiSU_AP.tar >> dist/R920_ReSukiSU_AP.tar.md5
@@ -923,6 +956,13 @@ jobs:
 
           echo "===== DIST FILES ====="
           ls -lh dist
+
+      - name: Validate R920 AP before release
+        run: |
+          python3 tools/validar_ap_r920.py dist/R920_ReSukiSU_AP.tar \
+            --config dist/resukisu.config \
+            --stock work/firmware/boot-stock.img \
+            --image dist/Image-ReSukiSU-R920
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
